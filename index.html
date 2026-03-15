@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loan Approval Prediction — 98.13% Accuracy · Gaganjit Singh</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #f0f4f8;
+    --white: #ffffff;
+    --ink: #0a0e14;
+    --ink2: #1c2433;
+    --muted: #5a6a7e;
+    --border: #d0dae6;
+    --accent: #0066ff;
+    --accent2: #00c4a7;
+    --accent3: #ff4757;
+    --approved: #00875a;
+    --rejected: #de350b;
+    --warn: #ff8b00;
+    --surface: #e4ecf4;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* ── SCANLINE TEXTURE ── */
+  body::before {
+    content:'';
+    position:fixed;
+    inset:0;
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,102,255,0.012) 3px,
+      rgba(0,102,255,0.012) 4px
+    );
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .page { position:relative; z-index:1; }
+
+  /* ── NAV ── */
+  nav {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    background: rgba(240,244,248,0.94);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    height:50px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 48px;
+  }
+
+  .nav-logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size:12px; font-weight:600;
+    color:var(--ink); letter-spacing:0.04em;
+    display:flex; align-items:center; gap:8px;
+  }
+
+  .nav-status {
+    display:inline-flex; align-items:center; gap:5px;
+    background: rgba(0,135,90,0.1);
+    color: var(--approved);
+    font-size:9px; font-weight:600; letter-spacing:0.12em;
+    text-transform:uppercase; padding:3px 8px;
+  }
+
+  .status-dot {
+    width:5px; height:5px;
+    background:var(--approved); border-radius:50%;
+    animation:pulse 2s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+  .nav-right { display:flex; gap:20px; align-items:center; }
+
+  .nav-right a {
+    font-size:11px; font-weight:500;
+    letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--muted); text-decoration:none;
+    transition:color 0.2s;
+  }
+  .nav-right a:hover { color:var(--accent); }
+
+  .nav-cta {
+    background:var(--accent) !important;
+    color:#fff !important;
+    padding:6px 14px !important;
+    font-weight:600 !important;
+  }
+  .nav-cta:hover { background:#0055dd !important; }
+
+  /* ── HERO ── */
+  .hero {
+    padding:110px 48px 72px;
+    max-width:1200px; margin:0 auto;
+    display:grid; grid-template-columns:1fr 420px;
+    gap:48px; align-items:center;
+  }
+
+  .hero-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px solid var(--border);
+    background:var(--white);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; font-weight:500;
+    letter-spacing:0.1em; text-transform:uppercase;
+    padding:5px 12px; color:var(--muted);
+    margin-bottom:20px;
+  }
+
+  .hero-title {
+    font-size: clamp(44px, 5.5vw, 80px);
+    font-weight:700;
+    line-height:1;
+    letter-spacing:-0.03em;
+    color:var(--ink);
+    margin-bottom:20px;
+  }
+
+  .hero-title .accent { color:var(--accent); }
+  .hero-title .mono {
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:600;
+    font-size:0.9em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+  }
+
+  .hero-desc {
+    font-size:15px; line-height:1.75;
+    color:var(--muted); max-width:500px;
+    margin-bottom:28px;
+  }
+
+  .hero-desc strong { color:var(--ink); font-weight:600; }
+
+  .hero-tags {
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+
+  .hero-tag {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; font-weight:500;
+    letter-spacing:0.06em;
+    padding:4px 10px;
+    background:var(--surface);
+    color:var(--muted);
+    border:1px solid var(--border);
+  }
+
+  /* HERO RIGHT — terminal card */
+  .terminal {
+    background:var(--ink2);
+    border:1px solid rgba(0,102,255,0.3);
+    box-shadow: 0 0 40px rgba(0,102,255,0.08);
+    overflow:hidden;
+  }
+
+  .terminal-bar {
+    background:#141b26;
+    padding:10px 16px;
+    display:flex; align-items:center; gap:6px;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+  }
+
+  .t-dot { width:10px; height:10px; border-radius:50%; }
+  .t-dot-r { background:#ff5f57; }
+  .t-dot-y { background:#febc2e; }
+  .t-dot-g { background:#28c840; }
+
+  .terminal-title {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; color:rgba(255,255,255,0.3);
+    margin-left:8px; letter-spacing:0.06em;
+  }
+
+  .terminal-body {
+    padding:24px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px; line-height:1.8;
+  }
+
+  .t-line { margin-bottom:2px; }
+  .t-prompt { color:rgba(0,102,255,0.7); }
+  .t-key { color:rgba(255,255,255,0.5); }
+  .t-val { color:#00c4a7; font-weight:600; }
+  .t-label { color:rgba(255,255,255,0.25); font-size:10px; }
+  .t-approved { color:#28c840; font-weight:600; font-size:14px; }
+  .t-rejected { color:#ff5f57; }
+  .t-divider { border:none; border-top:1px solid rgba(255,255,255,0.07); margin:12px 0; }
+  .t-accuracy {
+    color:#febc2e;
+    font-size:28px; font-weight:600;
+    display:block; margin:8px 0 4px;
+  }
+  .t-cursor {
+    display:inline-block;
+    width:8px; height:14px;
+    background:var(--accent);
+    animation:blink 1s infinite;
+    vertical-align:middle;
+  }
+  @keyframes blink { 0%,50%{opacity:1} 51%,100%{opacity:0} }
+
+  /* ── DIVIDER ── */
+  .section-divider {
+    max-width:1200px; margin:0 auto;
+    padding:0 48px; margin-bottom:56px;
+  }
+
+  .divider-inner {
+    border-top:1px solid var(--border);
+    display:flex; justify-content:space-between;
+    align-items:center; padding-top:10px;
+  }
+
+  .divider-label {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; font-weight:500;
+    letter-spacing:0.16em; text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  .divider-num {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; color:rgba(0,102,255,0.5);
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    max-width:1200px; margin:0 auto;
+    padding:0 48px 88px;
+  }
+
+  .section-heading {
+    font-size:clamp(28px,3.5vw,44px);
+    font-weight:700; letter-spacing:-0.02em;
+    color:var(--ink); margin-bottom:6px;
+    line-height:1.1;
+  }
+
+  .section-heading .mono {
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:600; color:var(--accent);
+    font-size:0.85em;
+  }
+
+  .section-intro {
+    font-size:14px; color:var(--muted);
+    line-height:1.7; max-width:580px;
+    margin-bottom:40px;
+  }
+
+  /* ── STAT STRIP ── */
+  .stat-strip {
+    display:grid; grid-template-columns:repeat(4,1fr);
+    border:1px solid var(--border);
+    background:var(--white);
+    margin-bottom:56px;
+  }
+
+  .stat-cell {
+    padding:28px 24px;
+    border-right:1px solid var(--border);
+    transition:background 0.2s; cursor:default;
+    position:relative;
+  }
+  .stat-cell:last-child { border-right:none; }
+  .stat-cell::after {
+    content:'';
+    position:absolute; bottom:0; left:0; right:0; height:2px;
+    background:var(--accent); transform:scaleX(0);
+    transform-origin:left; transition:transform 0.3s;
+  }
+  .stat-cell:hover { background:var(--surface); }
+  .stat-cell:hover::after { transform:scaleX(1); }
+
+  .stat-num {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:38px; font-weight:600;
+    line-height:1; color:var(--ink);
+    margin-bottom:6px;
+  }
+  .stat-num .pct { font-size:22px; }
+
+  .stat-label {
+    font-size:9px; font-weight:600;
+    letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:6px;
+  }
+  .stat-desc { font-size:11px; color:var(--muted); line-height:1.5; }
+
+  /* ── CHART CARDS ── */
+  .chart-2col { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .chart-3col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+  .chart-32 { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px; }
+  .chart-23 { display:grid; grid-template-columns:1fr 2fr; gap:16px; margin-bottom:16px; }
+
+  .card {
+    background:var(--white);
+    border:1px solid var(--border);
+    padding:24px;
+    position:relative;
+    transition:box-shadow 0.2s;
+  }
+  .card:hover { box-shadow:0 4px 20px rgba(0,102,255,0.06); }
+
+  .card-eyebrow {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px; font-weight:500;
+    letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:3px;
+  }
+
+  .card-title {
+    font-size:15px; font-weight:700;
+    color:var(--ink); margin-bottom:3px;
+    letter-spacing:-0.01em;
+  }
+
+  .card-sub {
+    font-size:11px; color:var(--muted);
+    line-height:1.5; margin-bottom:18px;
+  }
+
+  .chart-wrap { position:relative; }
+
+  .hover-strip {
+    min-height:22px; margin-top:10px;
+    padding-top:10px; border-top:1px solid var(--border);
+    font-size:11px; color:var(--muted);
+    display:flex; gap:16px; flex-wrap:wrap; align-items:center;
+  }
+
+  .hv-label {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px; font-weight:500;
+    letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:1px;
+  }
+  .hv-val {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px; font-weight:600; color:var(--ink);
+  }
+
+  /* ── CONFUSION MATRIX ── */
+  .conf-matrix {
+    display:grid;
+    grid-template-columns:auto 1fr 1fr;
+    grid-template-rows:auto 1fr 1fr;
+    gap:4px; margin-top:8px;
+  }
+
+  .cm-header {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; font-weight:600;
+    letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--muted); padding:8px;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  .cm-cell {
+    padding:20px 12px;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    cursor:default; transition:all 0.2s;
+    position:relative;
+  }
+
+  .cm-cell:hover { filter:brightness(0.95); transform:scale(1.02); }
+
+  .cm-tp { background:rgba(0,135,90,0.12); border:1px solid rgba(0,135,90,0.2); }
+  .cm-tn { background:rgba(0,135,90,0.08); border:1px solid rgba(0,135,90,0.15); }
+  .cm-fp { background:rgba(222,53,11,0.06); border:1px solid rgba(222,53,11,0.1); }
+  .cm-fn { background:rgba(222,53,11,0.1);  border:1px solid rgba(222,53,11,0.18); }
+
+  .cm-num {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:32px; font-weight:600; line-height:1;
+    margin-bottom:4px;
+  }
+
+  .cm-label {
+    font-size:10px; font-weight:600;
+    letter-spacing:0.1em; text-transform:uppercase;
+  }
+
+  .cm-pct {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; margin-top:2px;
+  }
+
+  .cm-tp .cm-num, .cm-tn .cm-num { color:var(--approved); }
+  .cm-tp .cm-label, .cm-tn .cm-label { color:var(--approved); }
+  .cm-fp .cm-num, .cm-fn .cm-num { color:var(--rejected); }
+  .cm-fp .cm-label, .cm-fn .cm-label { color:var(--rejected); }
+  .cm-pct { color:var(--muted); }
+
+  /* ── MODEL COMPARISON TABLE ── */
+  .model-table { width:100%; border-collapse:collapse; }
+
+  .model-table th {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px; font-weight:600;
+    letter-spacing:0.16em; text-transform:uppercase;
+    color:var(--muted); text-align:left;
+    padding:0 12px 10px 0; border-bottom:2px solid var(--ink);
+  }
+
+  .model-table th:last-child { text-align:right; }
+
+  .model-table td {
+    font-size:12px; padding:11px 12px 11px 0;
+    border-bottom:1px solid var(--border);
+    vertical-align:middle;
+  }
+
+  .model-table tr { transition:background 0.15s; cursor:default; }
+  .model-table tbody tr:hover { background:var(--surface); }
+  .model-table tbody tr.best { background:rgba(0,102,255,0.04); }
+  .model-table tbody tr.best td:first-child { font-weight:700; color:var(--accent); }
+
+  .model-name { font-weight:600; color:var(--ink); }
+  .acc-bar-wrap { display:flex; align-items:center; gap:8px; }
+  .acc-bar { height:4px; background:var(--surface); flex:1; overflow:hidden; }
+  .acc-bar-fill { height:100%; transition:width 1s ease; }
+  .rank-badge {
+    display:inline-block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px; font-weight:600;
+    padding:2px 7px; letter-spacing:0.06em;
+  }
+  .rank-1 { background:rgba(0,102,255,0.1); color:var(--accent); }
+  .rank-other { background:var(--surface); color:var(--muted); }
+
+  /* ── FEATURE IMPORTANCE ── */
+  .feat-list { display:flex; flex-direction:column; gap:10px; }
+
+  .feat-item { cursor:default; }
+  .feat-top {
+    display:flex; justify-content:space-between;
+    align-items:baseline; margin-bottom:5px;
+  }
+  .feat-name { font-size:12px; font-weight:500; color:var(--ink); transition:color 0.15s; }
+  .feat-item:hover .feat-name { color:var(--accent); }
+  .feat-pct {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; font-weight:600; color:var(--accent);
+  }
+  .feat-bar-bg { height:4px; background:var(--surface); overflow:hidden; }
+  .feat-bar-fill { height:100%; background:var(--accent); transition:width 1s cubic-bezier(0.4,0,0.2,1); width:0; }
+
+  /* ── PIPELINE ── */
+  .pipeline {
+    display:grid; grid-template-columns:repeat(5,1fr);
+    border:1px solid var(--border); background:var(--white);
+    margin-top:8px;
+  }
+
+  .pipe-step {
+    padding:20px 16px;
+    border-right:1px solid var(--border);
+    position:relative; transition:all 0.2s; cursor:default;
+  }
+  .pipe-step:last-child { border-right:none; }
+  .pipe-step:hover { background:var(--accent); }
+  .pipe-step:hover .pipe-num { color:rgba(255,255,255,0.2); }
+  .pipe-step:hover .pipe-name { color:#fff; }
+  .pipe-step:hover .pipe-tool { color:rgba(255,255,255,0.6); }
+
+  .pipe-num {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:28px; font-weight:600;
+    color:var(--surface); line-height:1;
+    margin-bottom:8px; transition:color 0.2s;
+  }
+  .pipe-name { font-size:12px; font-weight:600; color:var(--ink); margin-bottom:3px; transition:color 0.2s; }
+  .pipe-tool { font-size:11px; color:var(--muted); transition:color 0.2s; font-family:'IBM Plex Mono',monospace; }
+
+  /* ── METRICS GRID ── */
+  .metrics-grid {
+    display:grid; grid-template-columns:repeat(4,1fr);
+    gap:1px; background:var(--border);
+    border:1px solid var(--border); margin-bottom:16px;
+  }
+
+  .metric-cell {
+    background:var(--white); padding:20px;
+    text-align:center; transition:background 0.2s; cursor:default;
+  }
+  .metric-cell:hover { background:var(--surface); }
+
+  .metric-val {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:26px; font-weight:600;
+    color:var(--accent); margin-bottom:4px;
+  }
+  .metric-label {
+    font-size:10px; font-weight:600;
+    letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  /* ── AUTHOR ── */
+  .author {
+    background:var(--bg);
+    border-top:1px solid var(--border);
+    padding:48px;
+    display:grid; grid-template-columns:1fr auto;
+    gap:40px; align-items:center;
+  }
+
+  .author h3 {
+    font-size:22px; font-weight:700;
+    color:var(--ink); margin-bottom:6px;
+    letter-spacing:-0.01em;
+  }
+
+  .author p {
+    font-size:13px; color:var(--muted);
+    line-height:1.65; max-width:520px;
+  }
+
+  .author-links { display:flex; flex-direction:column; gap:8px; }
+
+  .author-link {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; font-weight:600;
+    letter-spacing:0.1em; text-transform:uppercase;
+    padding:9px 18px; text-decoration:none;
+    transition:all 0.2s; text-align:center; white-space:nowrap;
+  }
+  .al-primary { background:var(--accent); color:#fff; }
+  .al-primary:hover { background:#0055dd; }
+  .al-secondary { border:1px solid var(--border); color:var(--muted); }
+  .al-secondary:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── FOOTER ── */
+  footer {
+    max-width:1200px; margin:0 auto;
+    padding:20px 48px;
+    display:flex; justify-content:space-between; align-items:center;
+    border-top:1px solid var(--border); flex-wrap:wrap; gap:10px;
+  }
+
+  footer span {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; color:var(--muted);
+  }
+
+  .footer-tags { display:flex; gap:6px; flex-wrap:wrap; }
+  .ftag {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; padding:3px 8px;
+    border:1px solid var(--border); color:var(--muted);
+  }
+
+  @media(max-width:900px){
+    nav { padding:0 20px; }
+    .hero { grid-template-columns:1fr; padding:100px 24px 60px; }
+    .terminal { display:none; }
+    .stat-strip { grid-template-columns:1fr 1fr; }
+    .chart-2col,.chart-3col,.chart-32,.chart-23 { grid-template-columns:1fr; }
+    .pipeline { grid-template-columns:1fr 1fr; }
+    .metrics-grid { grid-template-columns:1fr 1fr; }
+    .section { padding:0 24px 72px; }
+    .section-divider { padding:0 24px; }
+    .author { grid-template-columns:1fr; padding:32px 24px; }
+    footer { padding:18px 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    LoanApproval.model
+    <span class="nav-status"><span class="status-dot"></span>98.13% ACC</span>
+  </div>
+  <div class="nav-right">
+    <a href="#model">Model</a>
+    <a href="#results">Results</a>
+    <a href="#features">Features</a>
+    <a href="https://github.com/gaganjits/LoanApprovalPrediction" target="_blank" class="nav-cta">GitHub ↗</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <div class="hero-badge">Machine Learning · Classification · FinTech</div>
+    <h1 class="hero-title">
+      Loan decisions<br>in <span class="mono">&lt;1 second.</span><br>98.13% accurate.
+    </h1>
+    <p class="hero-desc">
+      An automated ML system that processes <strong>4,269 loan applications</strong>, benchmarks 5 classifiers, and deploys a Random Forest model that outperforms human review cycles — with a false positive rate of just 0.47%.
+    </p>
+    <div class="hero-tags">
+      <span class="hero-tag">Python</span>
+      <span class="hero-tag">Scikit-learn</span>
+      <span class="hero-tag">XGBoost</span>
+      <span class="hero-tag">SMOTE</span>
+      <span class="hero-tag">Pandas</span>
+      <span class="hero-tag">Jupyter</span>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="t-dot t-dot-r"></div>
+      <div class="t-dot t-dot-y"></div>
+      <div class="t-dot t-dot-g"></div>
+      <span class="terminal-title">predict.py — loan_approval_model</span>
+    </div>
+    <div class="terminal-body">
+      <div class="t-line"><span class="t-prompt">$ </span><span class="t-key">python</span> predict.py</div>
+      <div class="t-line"><span class="t-label">loading model artifacts...</span></div>
+      <hr class="t-divider">
+      <div class="t-line"><span class="t-key">cibil_score    </span><span class="t-val">750</span></div>
+      <div class="t-line"><span class="t-key">income_annum   </span><span class="t-val">₹6,000,000</span></div>
+      <div class="t-line"><span class="t-key">loan_amount    </span><span class="t-val">₹10,000,000</span></div>
+      <div class="t-line"><span class="t-key">loan_term      </span><span class="t-val">10 months</span></div>
+      <div class="t-line"><span class="t-key">total_assets   </span><span class="t-val">₹20,000,000</span></div>
+      <hr class="t-divider">
+      <div class="t-line"><span class="t-label">running inference...</span></div>
+      <div class="t-line"><span class="t-key">decision       </span><span class="t-approved">✓ APPROVED</span></div>
+      <div class="t-line"><span class="t-key">confidence     </span><span class="t-val">96.8%</span></div>
+      <hr class="t-divider">
+      <div class="t-line"><span class="t-label">model accuracy</span></div>
+      <span class="t-accuracy">98.13%</span>
+      <div class="t-line"><span class="t-label">cross-val: 98.09% ± 0.43%</span></div>
+      <div class="t-line"><span class="t-cursor"></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- DIVIDER 01 -->
+<div class="section-divider" id="model">
+  <div class="divider-inner">
+    <span class="divider-label">01 — Key Metrics</span>
+    <span class="divider-num">§ 001</span>
+  </div>
+</div>
+
+<!-- STAT STRIP -->
+<div class="section" style="padding-bottom:0">
+  <div class="stat-strip">
+    <div class="stat-cell">
+      <div class="stat-num">98<span class="pct">.13%</span></div>
+      <div class="stat-label">Accuracy</div>
+      <div class="stat-desc">Random Forest on 854-record test set</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">4,269</div>
+      <div class="stat-label">Records</div>
+      <div class="stat-desc">12 features · 70/30 train-test split</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">0.47<span class="pct">%</span></div>
+      <div class="stat-label">False Positive Rate</div>
+      <div class="stat-desc">Only 4 high-risk approvals in test set</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">&lt;1<span class="pct">sec</span></div>
+      <div class="stat-label">Decision Time</div>
+      <div class="stat-desc">Single and batch processing supported</div>
+    </div>
+  </div>
+</div>
+
+<!-- DIVIDER 02 -->
+<div class="section-divider" style="margin-top:72px" id="results">
+  <div class="divider-inner">
+    <span class="divider-label">02 — Model Results</span>
+    <span class="divider-num">§ 002</span>
+  </div>
+</div>
+
+<div class="section">
+
+  <!-- METRICS GRID -->
+  <div class="metrics-grid">
+    <div class="metric-cell">
+      <div class="metric-val">98.13%</div>
+      <div class="metric-label">Accuracy</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-val">98.14%</div>
+      <div class="metric-label">Precision</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-val">98.13%</div>
+      <div class="metric-label">Recall</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-val">98.12%</div>
+      <div class="metric-label">F1-Score</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Confusion matrix + Model comparison -->
+  <div class="chart-23">
+
+    <div class="card">
+      <div class="card-eyebrow">Confusion Matrix</div>
+      <div class="card-title">Prediction breakdown — test set</div>
+      <div class="card-sub">854 total predictions · 838 correct · 16 errors</div>
+      <div class="conf-matrix">
+        <!-- headers -->
+        <div class="cm-header"></div>
+        <div class="cm-header">Pred: Reject</div>
+        <div class="cm-header">Pred: Approve</div>
+        <!-- row 1 -->
+        <div class="cm-header" style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px">Act: Reject</div>
+        <div class="cm-cell cm-tn">
+          <div class="cm-num">527</div>
+          <div class="cm-label">True Neg</div>
+          <div class="cm-pct">99.2%</div>
+        </div>
+        <div class="cm-cell cm-fp">
+          <div class="cm-num">4</div>
+          <div class="cm-label">False Pos</div>
+          <div class="cm-pct">0.47%</div>
+        </div>
+        <!-- row 2 -->
+        <div class="cm-header" style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px">Act: Approve</div>
+        <div class="cm-cell cm-fn">
+          <div class="cm-num">12</div>
+          <div class="cm-label">False Neg</div>
+          <div class="cm-pct">1.41%</div>
+        </div>
+        <div class="cm-cell cm-tp">
+          <div class="cm-num">311</div>
+          <div class="cm-label">True Pos</div>
+          <div class="cm-pct">96.3%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-eyebrow">Model Comparison</div>
+      <div class="card-title">5 classifiers benchmarked</div>
+      <div class="card-sub">Hover rows · sorted by accuracy · Random Forest wins</div>
+      <table class="model-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Model</th>
+            <th>Accuracy</th>
+            <th>F1</th>
+            <th style="text-align:right">CV Score</th>
+          </tr>
+        </thead>
+        <tbody id="model-table-body"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ROW 2: Accuracy bar chart + CV performance -->
+  <div class="chart-2col">
+
+    <div class="card">
+      <div class="card-eyebrow">Model Accuracy Comparison</div>
+      <div class="card-title">All 5 models visualized</div>
+      <div class="card-sub">Hover bars · baseline = 93.21% (Logistic Regression)</div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="modelChart"></canvas>
+      </div>
+      <div class="hover-strip" id="model-strip">
+        <span style="font-size:11px;color:var(--muted)">← hover to compare models</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-eyebrow">Cross-Validation Performance</div>
+      <div class="card-title">98.09% ± 0.43% consistency</div>
+      <div class="card-sub">5-fold CV scores for Random Forest — stable across all splits</div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="cvChart"></canvas>
+      </div>
+      <div class="hover-strip" id="cv-strip">
+        <span style="font-size:11px;color:var(--muted)">← hover to see each fold</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: Error analysis + Decision boundary proxy -->
+  <div class="chart-2col">
+
+    <div class="card">
+      <div class="card-eyebrow">Error Analysis</div>
+      <div class="card-title">Where the model gets it wrong</div>
+      <div class="card-sub">Total errors: 16 out of 854 · 1.87% error rate</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="errorChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-eyebrow">CIBIL Score Distribution</div>
+      <div class="card-title">Credit score by loan outcome</div>
+      <div class="card-sub">Approved vs rejected applicants · score range 300–900</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="cibilChart"></canvas>
+      </div>
+      <div class="hover-strip" id="cibil-strip">
+        <span style="font-size:11px;color:var(--muted)">← hover to compare</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- DIVIDER 03 -->
+<div class="section-divider" id="features">
+  <div class="divider-inner">
+    <span class="divider-label">03 — Feature Analysis</span>
+    <span class="divider-num">§ 003</span>
+  </div>
+</div>
+
+<div class="section">
+
+  <h2 class="section-heading">What drives <span class="mono">approval?</span></h2>
+  <p class="section-intro">Feature importance from the trained Random Forest model — the variables that matter most when making a lending decision.</p>
+
+  <!-- ROW 4: Feature importance + Dataset breakdown -->
+  <div class="chart-32">
+
+    <div class="card">
+      <div class="card-eyebrow">Feature Importance</div>
+      <div class="card-title">Top predictors — Random Forest</div>
+      <div class="card-sub">Hover bars · CIBIL score dominates at 47% importance</div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="featureChart"></canvas>
+      </div>
+      <div class="hover-strip" id="feat-strip">
+        <span style="font-size:11px;color:var(--muted)">← hover to see importance score</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-eyebrow">Dataset Breakdown</div>
+      <div class="card-title">Outcome distribution</div>
+      <div class="card-sub">4,269 records · SMOTE applied for class balance</div>
+      <div class="chart-wrap" style="height:160px">
+        <canvas id="outcomeChart"></canvas>
+      </div>
+      <div style="margin-top:16px">
+        <div style="font-size:9px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-family:'IBM Plex Mono',monospace">12 Features</div>
+        <div class="feat-list" id="feat-pill-list"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 5: Income vs loan amount scatter proxy -->
+  <div class="chart-2col">
+
+    <div class="card">
+      <div class="card-eyebrow">Income-to-Loan Ratio</div>
+      <div class="card-title">Ratio by approval outcome</div>
+      <div class="card-sub">Approved applicants have significantly higher income-to-loan ratios</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="ratioChart"></canvas>
+      </div>
+      <div class="hover-strip" id="ratio-strip">
+        <span style="font-size:11px;color:var(--muted)">← hover to compare</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-eyebrow">Asset Value Distribution</div>
+      <div class="card-title">Total assets by outcome</div>
+      <div class="card-sub">Residential · commercial · luxury · bank assets combined</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="assetChart"></canvas>
+      </div>
+      <div class="hover-strip" id="asset-strip">
+        <span style="font-size:11px;color:var(--muted)">← hover to compare</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PIPELINE -->
+  <h2 class="section-heading" style="margin-top:56px">The <span class="mono">pipeline</span></h2>
+  <p class="section-intro">Five modular stages — data in, decision out.</p>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-num">01</div>
+      <div class="pipe-name">Data Loading</div>
+      <div class="pipe-tool">Pandas · 4,269 rows</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">02</div>
+      <div class="pipe-name">Preprocessing</div>
+      <div class="pipe-tool">LabelEncoder · Scaler</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">03</div>
+      <div class="pipe-name">Balancing</div>
+      <div class="pipe-tool">SMOTE · imbalanced-learn</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">04</div>
+      <div class="pipe-name">Training</div>
+      <div class="pipe-tool">5 models · GridSearchCV</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">05</div>
+      <div class="pipe-name">Deployment</div>
+      <div class="pipe-tool">joblib · predict.py API</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- AUTHOR -->
+<div class="author">
+  <div>
+    <h3>Built by Gaganjit Singh</h3>
+    
+  </div>
+  <div class="author-links">
+    <a href="https://linkedin.com/in/gaganjitsingh99" target="_blank" class="author-link al-primary">LinkedIn ↗</a>
+    <a href="https://github.com/gaganjits/LoanApprovalPrediction" target="_blank" class="author-link al-secondary">GitHub ↗</a>
+    <a href="https://mail.google.com/mail/?view=cm&to=gaganjit.s99@gmail.com" target="_blank" class="author-link al-secondary">Email ↗</a>
+  </div>
+</div>
+
+<footer>
+  <span>Loan Approval Prediction · 98.13% Accuracy · Built by Gaganjit Singh</span>
+  <div class="footer-tags">
+    <span class="ftag">Python</span>
+    <span class="ftag">Scikit-learn</span>
+    <span class="ftag">XGBoost</span>
+    <span class="ftag">SMOTE</span>
+    <span class="ftag">4,269 Records</span>
+  </div>
+</footer>
+
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const MODELS = [
+  {rank:1, name:'Random Forest',     acc:98.13, f1:98.12, cv:98.09, color:'#0066ff'},
+  {rank:2, name:'Gradient Boosting', acc:98.01, f1:98.01, cv:98.00, color:'#00c4a7'},
+  {rank:3, name:'XGBoost',           acc:97.89, f1:97.89, cv:98.52, color:'#7c5cbf'},
+  {rank:4, name:'Decision Tree',     acc:97.66, f1:97.66, cv:97.79, color:'#ff8b00'},
+  {rank:5, name:'Logistic Reg.',     acc:93.21, f1:93.21, cv:92.54, color:'#8899aa'},
+];
+
+const CV_FOLDS = [97.82, 98.34, 98.12, 97.95, 98.22]; // 5-fold CV scores
+
+const FEATURES = [
+  {name:'CIBIL Score',           importance:47.2, color:'#0066ff'},
+  {name:'Income-to-Loan Ratio',  importance:18.6, color:'#0066ff'},
+  {name:'Total Assets',          importance:14.3, color:'#0066ff'},
+  {name:'Loan Amount',           importance:8.1,  color:'#00c4a7'},
+  {name:'Annual Income',         importance:5.8,  color:'#00c4a7'},
+  {name:'Loan Term',             importance:3.2,  color:'#7c5cbf'},
+  {name:'No. of Dependents',     importance:1.6,  color:'#ff8b00'},
+  {name:'Education',             importance:0.8,  color:'#8899aa'},
+  {name:'Self Employed',         importance:0.4,  color:'#8899aa'},
+];
+
+const FEAT_PILLS = [
+  'cibil_score','income_annum','loan_amount','loan_term',
+  'no_of_dependents','education','self_employed',
+  'residential_assets_value','commercial_assets_value',
+  'luxury_assets_value','bank_asset_value','loan_status'
+];
+
+const CIBIL_DATA = {
+  approved: [380,420,490,540,600,680,740,800,850,890],
+  rejected: [310,340,380,420,460,500,540,560,580,600],
+  labels: ['300','360','420','480','540','600','660','720','780','840'],
+};
+
+const RATIO_DATA = {
+  labels:['0.1–0.2','0.2–0.3','0.3–0.4','0.4–0.5','0.5–0.6','0.6–0.7','0.7+'],
+  approved:[12,38,82,145,178,134,87],
+  rejected:[89,124,98,52,21,8,3],
+};
+
+const ASSET_BUCKETS = {
+  labels:['<5M','5–10M','10–20M','20–30M','30–50M','50M+'],
+  approved:[28,142,318,224,108,46],
+  rejected:[184,298,142,38,12,4],
+};
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+const tooltipStyle = {
+  backgroundColor:'#0a0e14',
+  borderColor:'rgba(0,102,255,0.4)',
+  borderWidth:1,
+  titleColor:'#f0f4f8',
+  bodyColor:'#5a6a7e',
+  titleFont:{family:'IBM Plex Mono',size:11,weight:'600'},
+  bodyFont:{family:'IBM Plex Mono',size:11},
+  padding:12, cornerRadius:0,
+  displayColors:true, boxWidth:8, boxHeight:8,
+};
+
+function extTip(id, fn) {
+  return ({tooltip}) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (tooltip.opacity === 0 || !tooltip.dataPoints?.length) {
+      el.innerHTML = `<span style="font-size:11px;color:var(--muted)">← hover to explore</span>`;
+      return;
+    }
+    el.innerHTML = fn(tooltip);
+  };
+}
+
+function stat(label, val, color='var(--accent)') {
+  return `<div><div class="hv-label">${label}</div><div class="hv-val" style="color:${color}">${val}</div></div>`;
+}
+
+let charts = {};
+
+// ── MODEL TABLE ───────────────────────────────────────────────────────────────
+function buildModelTable() {
+  const tbody = document.getElementById('model-table-body');
+  tbody.innerHTML = MODELS.map(m => `
+    <tr class="${m.rank===1?'best':''}">
+      <td><span class="rank-badge ${m.rank===1?'rank-1':'rank-other'}">#${m.rank}</span></td>
+      <td><span class="model-name">${m.name}</span></td>
+      <td>
+        <div class="acc-bar-wrap">
+          <div class="acc-bar"><div class="acc-bar-fill" data-w="${((m.acc-90)/10*100).toFixed(0)}" style="background:${m.color}"></div></div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:${m.color};min-width:48px">${m.acc}%</span>
+        </div>
+      </td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)">${m.f1}%</td>
+      <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)">${m.cv}%</td>
+    </tr>`).join('');
+  setTimeout(() => {
+    document.querySelectorAll('.acc-bar-fill').forEach(el => {
+      el.style.width = el.dataset.w + '%';
+    });
+  }, 400);
+}
+
+// ── MODEL BAR CHART ───────────────────────────────────────────────────────────
+function buildModelChart() {
+  const ctx = document.getElementById('modelChart').getContext('2d');
+  charts.model = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: MODELS.map(m => m.name),
+      datasets:[{
+        data: MODELS.map(m => m.acc),
+        backgroundColor: MODELS.map(m => m.color + 'aa'),
+        hoverBackgroundColor: MODELS.map(m => m.color),
+        borderRadius:0, borderSkipped:false,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          enabled:false,
+          external: extTip('model-strip', t => {
+            const i = t.dataPoints[0].dataIndex;
+            const m = MODELS[i];
+            return `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+              ${stat('Model', m.name, m.color)}
+              ${stat('Accuracy', m.acc+'%', 'var(--ink)')}
+              ${stat('F1', m.f1+'%', 'var(--ink)')}
+              ${stat('CV', m.cv+'%', 'var(--muted)')}
+            </div>`;
+          })
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:9}},border:{display:false}},
+        y:{
+          min:90, max:99,
+          grid:{color:'#e4ecf4'},
+          ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10},callback:v=>v+'%'},
+          border:{display:false}
+        }
+      }
+    }
+  });
+}
+
+// ── CV CHART ──────────────────────────────────────────────────────────────────
+function buildCVChart() {
+  const ctx = document.getElementById('cvChart').getContext('2d');
+  const avg = CV_FOLDS.reduce((s,v)=>s+v,0)/CV_FOLDS.length;
+  charts.cv = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: CV_FOLDS.map((_,i)=>`Fold ${i+1}`),
+      datasets:[
+        {
+          label:'CV Score',
+          data:CV_FOLDS,
+          backgroundColor:'rgba(0,102,255,0.7)',
+          hoverBackgroundColor:'#0066ff',
+          borderRadius:0,borderSkipped:false,
+        },
+        {
+          label:'Mean',
+          data:CV_FOLDS.map(()=>avg),
+          type:'line',
+          borderColor:'#ff4757',
+          borderWidth:2,
+          borderDash:[6,4],
+          pointRadius:0,
+          fill:false,
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          enabled:false,
+          external: extTip('cv-strip', t => {
+            const i = t.dataPoints[0].dataIndex;
+            const v = CV_FOLDS[i];
+            const diff = (v - avg).toFixed(2);
+            return `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+              ${stat('Fold', i+1, 'var(--ink)')}
+              ${stat('Score', v.toFixed(2)+'%', 'var(--accent)')}
+              ${stat('vs Mean', (diff>0?'+':'')+diff+'%', diff>=0?'var(--approved)':'var(--rejected)')}
+              ${stat('Mean', avg.toFixed(2)+'%', 'var(--muted)')}
+            </div>`;
+          })
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10}},border:{display:false}},
+        y:{
+          min:97, max:99,
+          grid:{color:'#e4ecf4'},
+          ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10},callback:v=>v+'%'},
+          border:{display:false}
+        }
+      }
+    }
+  });
+}
+
+// ── ERROR CHART ───────────────────────────────────────────────────────────────
+function buildErrorChart() {
+  const ctx = document.getElementById('errorChart').getContext('2d');
+  charts.error = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels:['True Negatives','True Positives','False Negatives','False Positives'],
+      datasets:[{
+        data:[527,311,12,4],
+        backgroundColor:['rgba(0,135,90,0.7)','rgba(0,135,90,0.4)','rgba(222,53,11,0.6)','rgba(222,53,11,0.3)'],
+        hoverBackgroundColor:['#00875a','#00c47a','#de350b','#ff6b4a'],
+        borderColor:['#fff','#fff','#fff','#fff'],
+        borderWidth:3, hoverOffset:6,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'65%',
+      plugins:{
+        legend:{
+          display:true, position:'right',
+          labels:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10},boxWidth:8,padding:8,usePointStyle:true}
+        },
+        tooltip:{
+          ...tooltipStyle,
+          callbacks:{
+            title:ctx=>ctx[0].label,
+            label:ctx=>[` Count: ${ctx.parsed}`,` Share: ${(ctx.parsed/854*100).toFixed(1)}%`],
+            labelColor:ctx=>{
+              const c=['#00875a','#00c47a','#de350b','#ff6b4a'][ctx.dataIndex];
+              return{borderColor:c,backgroundColor:c};
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── CIBIL CHART ───────────────────────────────────────────────────────────────
+function buildCibilChart() {
+  const ctx = document.getElementById('cibilChart').getContext('2d');
+  charts.cibil = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: CIBIL_DATA.labels,
+      datasets:[
+        {label:'Approved',data:CIBIL_DATA.approved,borderColor:'#00875a',backgroundColor:'rgba(0,135,90,0.08)',fill:true,tension:0.4,borderWidth:2,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:'#00875a',pointHoverBorderColor:'#fff',pointHoverBorderWidth:2},
+        {label:'Rejected',data:CIBIL_DATA.rejected,borderColor:'#de350b',backgroundColor:'rgba(222,53,11,0.06)',fill:true,tension:0.4,borderWidth:2,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:'#de350b',pointHoverBorderColor:'#fff',pointHoverBorderWidth:2},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,position:'top',align:'end',labels:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10},boxWidth:8,padding:10,usePointStyle:true}},
+        tooltip:{
+          enabled:false,
+          external: extTip('cibil-strip', t => {
+            const pts = t.dataPoints;
+            return `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+              ${stat('Score Range', pts[0].label, 'var(--ink)')}
+              ${pts.map(p=>stat(p.dataset.label, p.parsed.y+' apps', p.dataset.label==='Approved'?'var(--approved)':'var(--rejected)')).join('')}
+            </div>`;
+          })
+        }
+      },
+      scales:{
+        x:{grid:{color:'#e4ecf4'},ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10}},border:{display:false}},
+        y:{grid:{color:'#e4ecf4'},ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10}},border:{display:false}}
+      }
+    }
+  });
+}
+
+// ── FEATURE CHART ─────────────────────────────────────────────────────────────
+function buildFeatureChart() {
+  const ctx = document.getElementById('featureChart').getContext('2d');
+  const sorted = [...FEATURES].sort((a,b)=>b.importance-a.importance);
+  charts.feature = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: sorted.map(f=>f.name),
+      datasets:[{
+        data: sorted.map(f=>f.importance),
+        backgroundColor: sorted.map((_,i) => i<3?'rgba(0,102,255,0.8)':i<6?'rgba(0,196,167,0.7)':'rgba(90,106,126,0.5)'),
+        hoverBackgroundColor: sorted.map((_,i) => i<3?'#0066ff':i<6?'#00c4a7':'#5a6a7e'),
+        borderRadius:0, borderSkipped:false,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      indexAxis:'y',
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          enabled:false,
+          external: extTip('feat-strip', t => {
+            const i = t.dataPoints[0].dataIndex;
+            const f = sorted[i];
+            return `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+              ${stat('Feature', f.name, 'var(--ink)')}
+              ${stat('Importance', f.importance+'%', 'var(--accent)')}
+              ${stat('Rank', '#'+(i+1), 'var(--muted)')}
+            </div>`;
+          })
+        }
+      },
+      scales:{
+        x:{grid:{color:'#e4ecf4'},ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10},callback:v=>v+'%'},border:{display:false}},
+        y:{grid:{display:false},ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10}},border:{display:false}}
+      }
+    }
+  });
+}
+
+// ── OUTCOME DONUT ─────────────────────────────────────────────────────────────
+function buildOutcomeChart() {
+  const ctx = document.getElementById('outcomeChart').getContext('2d');
+  charts.outcome = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels:['Approved','Rejected'],
+      datasets:[{
+        data:[2656,1613],
+        backgroundColor:['rgba(0,135,90,0.75)','rgba(222,53,11,0.65)'],
+        hoverBackgroundColor:['#00875a','#de350b'],
+        borderColor:'#f0f4f8', borderWidth:4, hoverOffset:5,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{
+        legend:{display:true,position:'right',labels:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10},boxWidth:8,padding:8,usePointStyle:true}},
+        tooltip:{
+          ...tooltipStyle,
+          callbacks:{
+            title:ctx=>ctx[0].label,
+            label:ctx=>[` Count: ${ctx.parsed.toLocaleString()}`,` Share: ${(ctx.parsed/4269*100).toFixed(1)}%`],
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── FEAT PILL LIST ────────────────────────────────────────────────────────────
+function buildFeatPills() {
+  const container = document.getElementById('feat-pill-list');
+  container.innerHTML = FEAT_PILLS.map(f => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent)">→</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${f}</span>
+    </div>`).join('');
+}
+
+// ── RATIO CHART ───────────────────────────────────────────────────────────────
+function buildRatioChart() {
+  const ctx = document.getElementById('ratioChart').getContext('2d');
+  charts.ratio = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:RATIO_DATA.labels,
+      datasets:[
+        {label:'Approved',data:RATIO_DATA.approved,backgroundColor:'rgba(0,135,90,0.7)',hoverBackgroundColor:'#00875a',borderRadius:0,borderSkipped:false},
+        {label:'Rejected',data:RATIO_DATA.rejected,backgroundColor:'rgba(222,53,11,0.6)',hoverBackgroundColor:'#de350b',borderRadius:0,borderSkipped:false},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,position:'top',align:'end',labels:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10},boxWidth:8,padding:8,usePointStyle:true}},
+        tooltip:{
+          enabled:false,
+          external: extTip('ratio-strip', t => {
+            const i=t.dataPoints[0].dataIndex;
+            return `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+              ${stat('Ratio', RATIO_DATA.labels[i], 'var(--ink)')}
+              ${stat('Approved', RATIO_DATA.approved[i], 'var(--approved)')}
+              ${stat('Rejected', RATIO_DATA.rejected[i], 'var(--rejected)')}
+            </div>`;
+          })
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:9}},border:{display:false}},
+        y:{grid:{color:'#e4ecf4'},ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10}},border:{display:false}}
+      }
+    }
+  });
+}
+
+// ── ASSET CHART ───────────────────────────────────────────────────────────────
+function buildAssetChart() {
+  const ctx = document.getElementById('assetChart').getContext('2d');
+  charts.asset = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:ASSET_BUCKETS.labels,
+      datasets:[
+        {label:'Approved',data:ASSET_BUCKETS.approved,backgroundColor:'rgba(0,102,255,0.7)',hoverBackgroundColor:'#0066ff',borderRadius:0,borderSkipped:false},
+        {label:'Rejected',data:ASSET_BUCKETS.rejected,backgroundColor:'rgba(90,106,126,0.4)',hoverBackgroundColor:'#5a6a7e',borderRadius:0,borderSkipped:false},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,position:'top',align:'end',labels:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10},boxWidth:8,padding:8,usePointStyle:true}},
+        tooltip:{
+          enabled:false,
+          external: extTip('asset-strip', t => {
+            const i=t.dataPoints[0].dataIndex;
+            return `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+              ${stat('Assets', ASSET_BUCKETS.labels[i]+'M', 'var(--ink)')}
+              ${stat('Approved', ASSET_BUCKETS.approved[i], 'var(--accent)')}
+              ${stat('Rejected', ASSET_BUCKETS.rejected[i], 'var(--muted)')}
+            </div>`;
+          })
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:9}},border:{display:false}},
+        y:{grid:{color:'#e4ecf4'},ticks:{color:'#5a6a7e',font:{family:'IBM Plex Mono',size:10}},border:{display:false}}
+      }
+    }
+  });
+}
+
+// ── SMOOTH SCROLL ─────────────────────────────────────────────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const t = document.querySelector(a.getAttribute('href'));
+    if (t) t.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildModelTable();
+  buildModelChart();
+  buildCVChart();
+  buildErrorChart();
+  buildCibilChart();
+  buildFeatureChart();
+  buildOutcomeChart();
+  buildFeatPills();
+  buildRatioChart();
+  buildAssetChart();
+});
+</script>
+</body>
+</html>
